@@ -8,9 +8,10 @@ function GameManager(size, InputManager, Actuator, StorageManager) {
 
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
+  this.inputManager.on("undo", this.undo.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
 
-  this.setup();
+  this.setup(true);
 }
 
 // Restart the game
@@ -18,6 +19,16 @@ GameManager.prototype.restart = function () {
   this.storageManager.clearGameState();
   this.actuator.continueGame(); // Clear the game won/lost message
   this.setup();
+};
+
+GameManager.prototype.undo = function () {
+  if (!this.storageManager.undoAvailable()) {
+    return;
+  }
+
+  this.storageManager.undoGameState();
+  this.actuator.continueGame(); // Clear the game won/lost message
+  this.setup(true);
 };
 
 // Keep playing after winning (allows going over 2048)
@@ -32,7 +43,7 @@ GameManager.prototype.isGameTerminated = function () {
 };
 
 // Set up the game
-GameManager.prototype.setup = function () {
+GameManager.prototype.setup = function (keepCurStates) {
   var previousState = this.storageManager.getGameState();
 
   // Reload the game from a previous game if present
@@ -55,7 +66,7 @@ GameManager.prototype.setup = function () {
   }
 
   // Update the actuator
-  this.actuate();
+  this.actuate(keepCurStates);
 };
 
 // Set up the initial tiles to start the game with
@@ -76,7 +87,7 @@ GameManager.prototype.addRandomTile = function () {
 };
 
 // Sends the updated grid to the actuator
-GameManager.prototype.actuate = function () {
+GameManager.prototype.actuate = function (keepCurStates) {
   if (this.storageManager.getBestScore() < this.score) {
     this.storageManager.setBestScore(this.score);
   }
@@ -84,6 +95,7 @@ GameManager.prototype.actuate = function () {
   // Clear the state when the game is over (game over only, not win)
   if (this.over) {
     this.storageManager.clearGameState();
+  } else if (keepCurStates) {
   } else {
     this.storageManager.setGameState(this.serialize());
   }
@@ -93,7 +105,8 @@ GameManager.prototype.actuate = function () {
     over:       this.over,
     won:        this.won,
     bestScore:  this.storageManager.getBestScore(),
-    terminated: this.isGameTerminated()
+    terminated: this.isGameTerminated(),
+    undoAvailable: this.storageManager.undoAvailable()
   });
 
 };

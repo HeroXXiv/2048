@@ -21,6 +21,7 @@ window.fakeStorage = {
 function LocalStorageManager() {
   this.bestScoreKey     = "bestScore";
   this.gameStateKey     = "gameState";
+  this.undoBuffer       = 5;
 
   var supported = this.localStorageSupported();
   this.storage = supported ? window.localStorage : window.fakeStorage;
@@ -50,14 +51,53 @@ LocalStorageManager.prototype.setBestScore = function (score) {
 
 // Game state getters/setters and clearing
 LocalStorageManager.prototype.getGameState = function () {
-  var stateJSON = this.storage.getItem(this.gameStateKey);
-  return stateJSON ? JSON.parse(stateJSON) : null;
+  var statesJSON = this.storage.getItem(this.gameStateKey);
+  var states = statesJSON ? JSON.parse(statesJSON) : null;
+  if (states && states.length) {
+    return states[0];
+  }
+
+  return null;
 };
 
 LocalStorageManager.prototype.setGameState = function (gameState) {
-  this.storage.setItem(this.gameStateKey, JSON.stringify(gameState));
+  var states = this.getGameStates();
+  if (states && states.length) {
+    gameState.ver = states[0].ver + 1;
+    states.unshift(gameState);
+    if (states.length > this.undoBuffer) {
+      states = states.slice(0, this.undoBuffer);
+    }
+  } else {
+    gameState.ver = 0;
+    states = [gameState];
+  }
+
+  this.storage.setItem(this.gameStateKey, JSON.stringify(states));
+};
+
+LocalStorageManager.prototype.getGameStates = function () {
+  var statesJSON = this.storage.getItem(this.gameStateKey);
+  return statesJSON ? JSON.parse(statesJSON) : null;
+};
+
+LocalStorageManager.prototype.setGameStates = function (states) {
+  this.storage.setItem(this.gameStateKey, JSON.stringify(states));
 };
 
 LocalStorageManager.prototype.clearGameState = function () {
   this.storage.removeItem(this.gameStateKey);
+};
+
+LocalStorageManager.prototype.undoGameState = function () {
+  var states = this.getGameStates();
+  if (states && states.length > 1) {
+    states.shift();
+    this.setGameStates(states);
+  }
+};
+
+LocalStorageManager.prototype.undoAvailable = function () {
+  var states = this.getGameStates();
+  return states && states.length > 1;
 };

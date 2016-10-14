@@ -3,6 +3,7 @@ function HTMLActuator() {
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
   this.messageContainer = document.querySelector(".game-message");
+  this.undoButton       = document.querySelector(".undo-button");
 
   this.score = 0;
 }
@@ -32,6 +33,7 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
       }
     }
 
+    self.setUndoButtonAvailability(metadata.undoAvailable);
   });
 };
 
@@ -136,4 +138,12 @@ HTMLActuator.prototype.clearMessage = function () {
   // IE only takes one value to remove at a time.
   this.messageContainer.classList.remove("game-won");
   this.messageContainer.classList.remove("game-over");
+};
+
+HTMLActuator.prototype.setUndoButtonAvailability = function(available) {
+  if (available) {
+    this.undoButton.classList.remove("disabled");
+  } else {
+    this.undoButton.classList.add("disabled");
+  }
 };
